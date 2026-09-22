@@ -9,24 +9,29 @@
 
     <a
         href="{{ route('stock-receipts.index') }}"
-        class="text-sm font-medium text-blue-600 hover:underline">
+        class="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-300">
         ← Atpakaļ uz preču saņemšanu
     </a>
 
 
-    <div class="mb-6 mt-3">
-        <h1 class="text-3xl font-bold text-gray-800">
+    <div class="mb-8 mt-5">
+        <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 dark:border-emerald-400/20 dark:bg-emerald-400/10">
+            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+            <span class="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">Jauna piegāde</span>
+        </div>
+
+        <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
             Reģistrēt preču saņemšanu
         </h1>
 
-        <p class="mt-1 text-gray-500">
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             Ievadi pavadzīmes informāciju un saņemtās preces.
         </p>
     </div>
 
 
     @if($errors->any())
-        <div class="mb-6 rounded-lg border border-red-200 bg-red-100 p-4 text-red-700">
+        <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300">
 
             <p class="font-semibold">
                 Lūdzu pārbaudi ievadītos datus.
@@ -45,7 +50,7 @@
     <form
         method="POST"
         action="{{ route('stock-receipts.store') }}"
-        class="rounded-xl bg-white p-8 shadow-sm">
+        class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-emerald-400/15 dark:bg-[#0d1b18] sm:p-8">
 
         @csrf
 
@@ -53,9 +58,15 @@
         <!-- DOCUMENT INFORMATION -->
         <div class="mb-8">
 
-            <h2 class="mb-5 text-xl font-semibold text-gray-800">
-                Pavadzīmes informācija
-            </h2>
+            <div class="mb-5 flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
+                        <path d="M14 2v6h6"/>
+                    </svg>
+                </div>
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Pavadzīmes informācija</h2>
+            </div>
 
             <div class="grid gap-6 md:grid-cols-2">
 
@@ -64,7 +75,7 @@
 
                     <label
                         for="document_number"
-                        class="mb-2 block font-medium text-gray-700">
+                        class="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
                         Pavadzīmes numurs
                     </label>
 
@@ -75,7 +86,7 @@
                         value="{{ old('document_number') }}"
                         required
                         placeholder="Piemēram, PAV-001"
-                        class="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-blue-500">
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-400/10 dark:border-emerald-400/10 dark:bg-[#091512] dark:text-slate-100 dark:focus:border-emerald-400/50 dark:focus:bg-[#0b1916]">
 
                 </div>
 
@@ -85,7 +96,7 @@
 
                     <label
                         for="received_at"
-                        class="mb-2 block font-medium text-gray-700">
+                        class="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
                         Saņemšanas datums un laiks
                     </label>
 
@@ -95,7 +106,7 @@
                         name="received_at"
                         value="{{ old('received_at', now()->format('Y-m-d\TH:i')) }}"
                         required
-                        class="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-blue-500">
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-400/10 dark:border-emerald-400/10 dark:bg-[#091512] dark:text-slate-100 dark:focus:border-emerald-400/50 dark:focus:bg-[#0b1916]">
 
                 </div>
 
@@ -110,11 +121,11 @@
             <div class="mb-4 flex items-center justify-between">
 
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-800">
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white">
                         Saņemtās preces
                     </h2>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                         Pievieno visas preces, kas norādītas pavadzīmē.
                     </p>
                 </div>
@@ -122,8 +133,12 @@
                 <button
                     type="button"
                     id="add-product"
-                    class="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700">
-                    + Pievienot preci
+                    class="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300 dark:hover:bg-emerald-400/15">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14"/>
+                        <path d="M5 12h14"/>
+                    </svg>
+                    Pievienot preci
                 </button>
 
             </div>
@@ -132,21 +147,21 @@
             <!-- PRODUCT ROWS -->
             <div id="product-list" class="space-y-4">
 
-                <div class="product-row rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div class="product-row rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-emerald-400/10 dark:bg-emerald-400/[0.035]">
 
                     <div class="grid items-end gap-4 md:grid-cols-12">
 
                         <!-- PRODUCT -->
                         <div class="md:col-span-7">
 
-                            <label class="mb-2 block text-sm font-medium text-gray-700">
+                            <label class="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
                                 Prece
                             </label>
 
                             <select
                                 name="products[0][product_id]"
                                 required
-                                class="product-select w-full rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:border-blue-500">
+                                class="product-select w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/10 dark:border-emerald-400/10 dark:bg-[#091512] dark:text-slate-100 dark:focus:border-emerald-400/50">
 
                                 <option value="">
                                     Izvēlies preci
@@ -173,7 +188,7 @@
                         <!-- QUANTITY -->
                         <div class="md:col-span-3">
 
-                            <label class="mb-2 block text-sm font-medium text-gray-700">
+                            <label class="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
                                 Daudzums
                             </label>
 
@@ -184,7 +199,7 @@
                                 min="1"
                                 required
                                 placeholder="10"
-                                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:border-blue-500">
+                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/10 dark:border-emerald-400/10 dark:bg-[#091512] dark:text-slate-100 dark:focus:border-emerald-400/50">
 
                         </div>
 
@@ -194,7 +209,7 @@
 
                             <button
                                 type="button"
-                                class="remove-product w-full rounded-lg bg-red-100 px-4 py-3 font-medium text-red-600 transition hover:bg-red-200">
+                                class="remove-product w-full rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-400/10 dark:text-red-300 dark:hover:bg-red-400/15">
                                 Dzēst
                             </button>
 
@@ -210,17 +225,17 @@
 
 
         <!-- BUTTONS -->
-        <div class="mt-8 flex justify-end gap-3 border-t pt-6">
+        <div class="mt-8 flex flex-col-reverse justify-end gap-3 border-t border-slate-100 pt-6 dark:border-emerald-400/10 sm:flex-row">
 
             <a
                 href="{{ route('stock-receipts.index') }}"
-                class="rounded-lg border border-gray-300 px-5 py-3 font-medium text-gray-700 transition hover:bg-gray-50">
+                class="rounded-xl border border-slate-200 px-5 py-3 text-center text-sm font-semibold text-slate-600 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-400/15 dark:text-slate-300 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300">
                 Atcelt
             </a>
 
             <button
                 type="submit"
-                class="rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition hover:bg-blue-700">
+                class="rounded-xl bg-emerald-400 px-6 py-3 text-sm font-bold text-[#07110f] transition hover:bg-emerald-300">
                 Reģistrēt saņemšanu
             </button>
 
@@ -246,21 +261,21 @@
             const row = document.createElement('div');
 
             row.className =
-                'product-row rounded-lg border border-gray-200 bg-gray-50 p-4';
+                'product-row rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-emerald-400/10 dark:bg-emerald-400/[0.035]';
 
             row.innerHTML = `
                 <div class="grid items-end gap-4 md:grid-cols-12">
 
                     <div class="md:col-span-7">
 
-                        <label class="mb-2 block text-sm font-medium text-gray-700">
+                        <label class="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
                             Prece
                         </label>
 
                         <select
                             name="products[${productIndex}][product_id]"
                             required
-                            class="product-select w-full rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:border-blue-500">
+                            class="product-select w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/10 dark:border-emerald-400/10 dark:bg-[#091512] dark:text-slate-100 dark:focus:border-emerald-400/50">
 
                             <option value="">
                                 Izvēlies preci
@@ -279,7 +294,7 @@
 
                     <div class="md:col-span-3">
 
-                        <label class="mb-2 block text-sm font-medium text-gray-700">
+                        <label class="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
                             Daudzums
                         </label>
 
@@ -289,7 +304,7 @@
                             min="1"
                             required
                             placeholder="10"
-                            class="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:border-blue-500">
+                            class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/10 dark:border-emerald-400/10 dark:bg-[#091512] dark:text-slate-100 dark:focus:border-emerald-400/50">
 
                     </div>
 
@@ -298,7 +313,7 @@
 
                         <button
                             type="button"
-                            class="remove-product w-full rounded-lg bg-red-100 px-4 py-3 font-medium text-red-600 transition hover:bg-red-200">
+                            class="remove-product w-full rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-400/10 dark:text-red-300 dark:hover:bg-red-400/15">
                             Dzēst
                         </button>
 

@@ -49,7 +49,7 @@ class StockIssueController extends Controller
 
 
     /**
-     * Reģistrē preču izsniegšanu.
+     * Reģistrē vienu vai vairākas preces vienā izsniegšanā.
      */
     public function store(Request $request)
     {
@@ -60,13 +60,20 @@ class StockIssueController extends Controller
                 'max:255',
             ],
 
-            'product_id' => [
+            'products' => [
+                'required',
+                'array',
+                'min:1',
+            ],
+
+            'products.*.product_id' => [
                 'required',
                 'integer',
+                'distinct',
                 'exists:products,id',
             ],
 
-            'quantity' => [
+            'products.*.quantity' => [
                 'required',
                 'integer',
                 'min:1',
@@ -83,53 +90,138 @@ class StockIssueController extends Controller
         DB::transaction(function () use ($validated) {
 
             /*
-             * Bloķējam preci transakcijas laikā,
-             * lai divi darbinieki vienlaicīgi nevarētu
-             * izsniegt vairāk preču nekā ir noliktavā.
-             */
-            $product = Product::where(
-                'id',
-                $validated['product_id']
-            )
-                ->lockForUpdate()
-                ->firstOrFail();
+            |--------------------------------------------------------------------------
+            | Sagatavojam preces
+            |--------------------------------------------------------------------------
+            |
+            | Sakārtojam pēc ID, lai preces vienmēr tiktu bloķētas
+            | vienādā secībā.
+            |
+            */
+
+            $requestedProducts = collect($validated['products'])
+                ->sortBy('product_id')
+                ->values();
+
+
+            $productIds = $requestedProducts
+                ->pluck('product_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
 
 
             /*
-             * Pārbaudām, vai noliktavā ir
-             * pietiekams daudzums.
-             */
-            if ($product->quantity < $validated['quantity']) {
+            |--------------------------------------------------------------------------
+            | Bloķējam visas nepieciešamās preces
+            |--------------------------------------------------------------------------
+            |
+            | lockForUpdate novērš situāciju, kur divi darbinieki
+            | vienlaicīgi mēģina izsniegt vienu un to pašu preci.
+            |
+            */
 
-                throw ValidationException::withMessages([
-                    'quantity' =>
-                        'Noliktavā nav pietiekams preces daudzums. Pieejams: '
-                        . $product->quantity
-                        . ' gab.',
-                ]);
+            $products = Product::whereIn('id', $productIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Pārbaudām VISAS preces pirms atlikumu maiņas
+            |--------------------------------------------------------------------------
+            |
+            | Ja kaut vienai precei nav pietiekams atlikums,
+            | tiek izmests validation error un visa transakcija
+            | tiek atcelta.
+            |
+            */
+
+            foreach ($requestedProducts as $index => $requestedProduct) {
+
+                $productId =
+                    (int) $requestedProduct['product_id'];
+
+                $quantity =
+                    (int) $requestedProduct['quantity'];
+
+
+                $product = $products->get($productId);
+
+
+                if (!$product) {
+
+                    throw ValidationException::withMessages([
+                        "products.$index.product_id" =>
+                            'Izvēlētā prece netika atrasta.',
+                    ]);
+                }
+
+
+                if ($product->quantity < $quantity) {
+
+                    throw ValidationException::withMessages([
+                        "products.$index.quantity" =>
+                            'Precei "' .
+                            $product->name .
+                            '" noliktavā nav pietiekams daudzums. Pieejams: ' .
+                            $product->quantity .
+                            ' gab.',
+                    ]);
+                }
             }
 
 
             /*
-             * Saglabājam izsniegšanas vēsturi.
-             */
-            StockIssue::create([
-                'order_number' => $validated['order_number'],
-                'product_id' => $product->id,
-                'user_id' => auth()->id(),
-                'quantity' => $validated['quantity'],
-                'notes' => $validated['notes'] ?? null,
-                'issued_at' => now(),
-            ]);
+            |--------------------------------------------------------------------------
+            | Reģistrējam izsniegšanu
+            |--------------------------------------------------------------------------
+            |
+            | Tikai pēc tam, kad visas preces ir pārbaudītas,
+            | izveidojam izsniegšanas ierakstus un samazinām atlikumus.
+            |
+            */
+
+            foreach ($requestedProducts as $requestedProduct) {
+
+                $productId =
+                    (int) $requestedProduct['product_id'];
+
+                $quantity =
+                    (int) $requestedProduct['quantity'];
 
 
-            /*
-             * Samazinām preces atlikumu.
-             */
-            $product->decrement(
-                'quantity',
-                $validated['quantity']
-            );
+                $product = $products->get($productId);
+
+
+                StockIssue::create([
+                    'order_number' =>
+                        $validated['order_number'],
+
+                    'product_id' =>
+                        $product->id,
+
+                    'user_id' =>
+                        auth()->id(),
+
+                    'quantity' =>
+                        $quantity,
+
+                    'notes' =>
+                        $validated['notes'] ?? null,
+
+                    'issued_at' =>
+                        now(),
+                ]);
+
+
+                $product->decrement(
+                    'quantity',
+                    $quantity
+                );
+            }
+
         });
 
 

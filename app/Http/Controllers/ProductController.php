@@ -19,6 +19,7 @@ class ProductController extends Controller
             'warehouseLocation.parent',
         ]);
 
+        // Meklēšana pēc preces nosaukuma
         if ($request->filled('search')) {
             $query->where(
                 'name',
@@ -27,6 +28,7 @@ class ProductController extends Controller
             );
         }
 
+        // Filtrēšana pēc kategorijas
         if ($request->filled('category')) {
             $query->where(
                 'category_id',
@@ -34,6 +36,7 @@ class ProductController extends Controller
             );
         }
 
+        // Filtrēšana pēc atlikuma statusa
         if ($request->filled('stock')) {
             if ($request->stock === 'low') {
                 $query->whereColumn(
@@ -52,9 +55,50 @@ class ProductController extends Controller
             }
         }
 
-        $products = $query
-            ->orderBy('name')
-            ->get();
+        // Atļautās kārtošanas iespējas
+        $allowedSorts = [
+            'name_asc',
+            'name_desc',
+            'price_asc',
+            'price_desc',
+            'quantity_asc',
+            'quantity_desc',
+        ];
+
+        // Ja URL norādīta nederīga vērtība,
+        // pēc noklusējuma kārto pēc nosaukuma A-Z
+        $sort = in_array($request->sort, $allowedSorts, true)
+            ? $request->sort
+            : 'name_asc';
+
+        // Kārtošana
+        switch ($sort) {
+            case 'name_desc':
+                $query->orderBy('name', 'desc');
+                break;
+
+            case 'price_asc':
+                $query->orderBy('price', 'asc');
+                break;
+
+            case 'price_desc':
+                $query->orderBy('price', 'desc');
+                break;
+
+            case 'quantity_asc':
+                $query->orderBy('quantity', 'asc');
+                break;
+
+            case 'quantity_desc':
+                $query->orderBy('quantity', 'desc');
+                break;
+
+            default:
+                $query->orderBy('name', 'asc');
+                break;
+        }
+
+        $products = $query->get();
 
         $categories = Category::orderBy('name')
             ->get();
@@ -64,7 +108,6 @@ class ProductController extends Controller
             compact('products', 'categories')
         );
     }
-
 
     public function create()
     {
@@ -87,7 +130,6 @@ class ProductController extends Controller
             )
         );
     }
-
 
     public function store(Request $request)
     {
@@ -127,7 +169,6 @@ class ProductController extends Controller
             ],
         ]);
 
-
         if (!empty($validated['warehouse_location_id'])) {
             $location = WarehouseLocation::findOrFail(
                 $validated['warehouse_location_id']
@@ -143,16 +184,13 @@ class ProductController extends Controller
             }
         }
 
-
         if ($request->hasFile('image')) {
             $validated['image'] = $request
                 ->file('image')
                 ->store('products', 'public');
         }
 
-
         Product::create($validated);
-
 
         return redirect()
             ->route('products.index')
@@ -161,7 +199,6 @@ class ProductController extends Controller
                 'Prece veiksmīgi pievienota.'
             );
     }
-
 
     public function edit(Product $product)
     {
@@ -185,7 +222,6 @@ class ProductController extends Controller
             )
         );
     }
-
 
     public function update(
         Request $request,
@@ -227,7 +263,6 @@ class ProductController extends Controller
             ],
         ]);
 
-
         if (!empty($validated['warehouse_location_id'])) {
             $location = WarehouseLocation::findOrFail(
                 $validated['warehouse_location_id']
@@ -243,7 +278,6 @@ class ProductController extends Controller
             }
         }
 
-
         if ($request->hasFile('image')) {
             if ($product->image) {
                 Storage::disk('public')
@@ -255,9 +289,7 @@ class ProductController extends Controller
                 ->store('products', 'public');
         }
 
-
         $product->update($validated);
-
 
         return redirect()
             ->route('products.index')
@@ -267,10 +299,9 @@ class ProductController extends Controller
             );
     }
 
-
     public function destroy(Product $product)
     {
-        /*
+        /**
          * Preci nedrīkst dzēst, ja tai ir
          * preču saņemšanas vēsture.
          */
@@ -283,8 +314,7 @@ class ProductController extends Controller
                 );
         }
 
-
-        /*
+        /**
          * Preci nedrīkst dzēst, ja tai ir
          * inventarizācijas korekciju vēsture.
          */
@@ -297,8 +327,7 @@ class ProductController extends Controller
                 );
         }
 
-
-        /*
+        /**
          * Preci nedrīkst dzēst, ja tai ir
          * preču izsniegšanas vēsture.
          */
@@ -316,8 +345,7 @@ class ProductController extends Controller
                 );
         }
 
-
-        /*
+        /**
          * Preci nedrīkst dzēst, ja tā ir
          * izmantota klienta pasūtījumā.
          */
@@ -335,8 +363,7 @@ class ProductController extends Controller
                 );
         }
 
-
-        /*
+        /**
          * Ja precei nav nekādas vēstures,
          * izdzēšam attēlu un pašu preci.
          */
@@ -345,9 +372,7 @@ class ProductController extends Controller
                 ->delete($product->image);
         }
 
-
         $product->delete();
-
 
         return redirect()
             ->route('products.index')

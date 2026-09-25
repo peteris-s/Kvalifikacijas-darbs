@@ -12,7 +12,9 @@
         <div>
             <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 dark:border-emerald-400/20 dark:bg-emerald-400/10">
                 <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
-                <span class="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">Pasūtījumu plūsma</span>
+                <span class="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
+                    Pasūtījumu plūsma
+                </span>
             </div>
 
             <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -28,10 +30,17 @@
             href="{{ route('customer-orders.create') }}"
             class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-bold text-[#07110f] shadow-sm transition hover:bg-emerald-300"
         >
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+                class="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+            >
                 <path d="M12 5v14"/>
                 <path d="M5 12h14"/>
             </svg>
+
             Reģistrēt pasūtījumu
         </a>
 
@@ -80,6 +89,7 @@
             ->where('status', 'issued')
             ->count();
     @endphp
+
 
     <div class="mb-8 grid gap-5 md:grid-cols-3">
 
@@ -170,9 +180,7 @@
 
 
                     <div class="text-sm text-slate-500 dark:text-slate-400">
-
                         {{ $order->ordered_at->format('d.m.Y H:i') }}
-
                     </div>
 
                 </div>
@@ -353,20 +361,21 @@
 
 
                             <form
+                                id="issue-form-{{ $order->id }}"
                                 method="POST"
                                 action="{{ route('customer-orders.issue', $order) }}"
-                                onsubmit="return confirm('Vai tiešām izsniegt visu pasūtījumu {{ $order->order_number }}?');"
                             >
 
                                 @csrf
 
                                 <button
-                                    type="submit"
+                                    type="button"
                                     @disabled(!$canIssue)
-                                    class="rounded-lg px-5 py-3 text-sm font-semibold text-white transition
+                                    onclick="openIssueModal('issue-form-{{ $order->id }}')"
+                                    class="rounded-lg px-5 py-3 text-sm font-semibold transition
                                     {{ $canIssue
                                         ? 'bg-emerald-400 text-[#07110f] hover:bg-emerald-300'
-                                        : 'cursor-not-allowed bg-slate-300 dark:bg-white/10 dark:text-slate-600' }}"
+                                        : 'cursor-not-allowed bg-slate-300 text-slate-500 dark:bg-white/10 dark:text-slate-600' }}"
                                 >
                                     Izsniegt pasūtījumu
                                 </button>
@@ -412,5 +421,137 @@
     </div>
 
 </div>
+
+
+<!-- ISSUE CONFIRMATION MODAL -->
+<div
+    id="issue-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+>
+    <div
+        class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl
+               dark:border-emerald-400/20 dark:bg-[#0d1b18]"
+    >
+
+        <div class="flex items-start gap-4">
+
+            <div
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl
+                       bg-emerald-100 text-emerald-600
+                       dark:bg-emerald-400/10 dark:text-emerald-300"
+            >
+                <svg
+                    class="h-6 w-6"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                >
+                    <path d="M20 6 9 17l-5-5"/>
+                </svg>
+            </div>
+
+
+            <div>
+
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                    Izsniegt pasūtījumu?
+                </h3>
+
+                <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                    Vai tiešām vēlaties izsniegt šo pasūtījumu?
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="mt-6 flex justify-end gap-3">
+
+            <button
+                type="button"
+                onclick="closeIssueModal()"
+                class="rounded-xl border border-slate-200 px-5 py-2.5
+                       text-sm font-semibold text-slate-700 transition
+                       hover:bg-slate-100
+                       dark:border-white/10 dark:text-slate-300
+                       dark:hover:bg-white/5"
+            >
+                Nē
+            </button>
+
+
+            <button
+                type="button"
+                onclick="confirmIssue()"
+                class="rounded-xl bg-emerald-400 px-5 py-2.5
+                       text-sm font-bold text-[#07110f] transition
+                       hover:bg-emerald-300"
+            >
+                Jā, izsniegt
+            </button>
+
+        </div>
+
+    </div>
+</div>
+
+
+<script>
+    let selectedIssueForm = null;
+
+    function openIssueModal(formId) {
+        selectedIssueForm = document.getElementById(formId);
+
+        const modal = document.getElementById('issue-modal');
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+
+    function closeIssueModal() {
+        const modal = document.getElementById('issue-modal');
+
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+
+        selectedIssueForm = null;
+    }
+
+
+    function confirmIssue() {
+        if (!selectedIssueForm) {
+            return;
+        }
+
+        const form = selectedIssueForm;
+
+        closeIssueModal();
+
+        form.submit();
+    }
+
+
+    document
+        .getElementById('issue-modal')
+        .addEventListener('click', function (event) {
+
+            if (event.target === this) {
+                closeIssueModal();
+            }
+
+        });
+
+
+    document.addEventListener('keydown', function (event) {
+
+        if (event.key === 'Escape') {
+            closeIssueModal();
+        }
+
+    });
+</script>
 
 @endsection

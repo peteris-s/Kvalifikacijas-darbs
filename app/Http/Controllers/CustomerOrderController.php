@@ -94,6 +94,30 @@ class CustomerOrderController extends Controller
         ]);
 
 
+        /*
+         * Pirms pasūtījuma izveides pārbaudām,
+         * vai noliktavā pietiek visu izvēlēto preču.
+         */
+        foreach ($validated['products'] as $index => $productData) {
+
+            $product = Product::findOrFail(
+                $productData['product_id']
+            );
+
+            if ($productData['quantity'] > $product->quantity) {
+
+                throw ValidationException::withMessages([
+                    "products.$index.quantity" =>
+                        'Pasūtītais daudzums precei "'
+                        . $product->name
+                        . '" pārsniedz pieejamo atlikumu. Noliktavā pieejami '
+                        . $product->quantity
+                        . ' gab.',
+                ]);
+            }
+        }
+
+
         DB::transaction(function () use ($validated) {
 
             $order = CustomerOrder::create([
@@ -130,7 +154,7 @@ class CustomerOrderController extends Controller
     {
         DB::transaction(function () use ($customerOrder) {
 
-            /*
+            /**
              * Bloķējam pašu pasūtījumu, lai divi
              * darbinieki nevarētu to izsniegt vienlaicīgi.
              */
@@ -142,7 +166,7 @@ class CustomerOrderController extends Controller
                 ->firstOrFail();
 
 
-            /*
+            /**
              * Ja pasūtījums jau izsniegts,
              * atkārtota izsniegšana nav atļauta.
              */
@@ -156,7 +180,7 @@ class CustomerOrderController extends Controller
             $order->load('items');
 
 
-            /*
+            /**
              * Sakārtojam produktu ID.
              * Tas palīdz samazināt DB bloķēšanas konfliktu risku.
              */
@@ -166,7 +190,7 @@ class CustomerOrderController extends Controller
                 ->values();
 
 
-            /*
+            /**
              * Bloķējam visas pasūtījuma preces.
              */
             $products = Product::whereIn('id', $productIds)
@@ -176,7 +200,7 @@ class CustomerOrderController extends Controller
                 ->keyBy('id');
 
 
-            /*
+            /**
              * PIRMS jebkādas atlikumu samazināšanas
              * pārbaudām visas preces.
              */
@@ -210,7 +234,7 @@ class CustomerOrderController extends Controller
             }
 
 
-            /*
+            /**
              * Visām precēm atlikums ir pietiekams.
              * Tagad varam izsniegt visu pasūtījumu.
              */
@@ -221,7 +245,7 @@ class CustomerOrderController extends Controller
                 );
 
 
-                /*
+                /**
                  * Izveidojam izsniegšanas vēstures ierakstu.
                  */
                 StockIssue::create([
@@ -234,7 +258,7 @@ class CustomerOrderController extends Controller
                 ]);
 
 
-                /*
+                /**
                  * Samazinām noliktavas atlikumu.
                  */
                 $product->decrement(
@@ -244,7 +268,7 @@ class CustomerOrderController extends Controller
             }
 
 
-            /*
+            /**
              * Pasūtījums pilnībā izsniegts.
              */
             $order->update([

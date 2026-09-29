@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Reģistrēt saņemšanu | StockManager')
+
 @section('page-title', 'Preču saņemšana')
 
 @section('content')
@@ -15,9 +16,12 @@
 
 
     <div class="mb-8 mt-5">
+
         <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 dark:border-emerald-400/20 dark:bg-emerald-400/10">
             <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
-            <span class="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">Jauna piegāde</span>
+            <span class="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
+                Jauna piegāde
+            </span>
         </div>
 
         <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -27,10 +31,12 @@
         <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
             Ievadi pavadzīmes informāciju un saņemtās preces.
         </p>
+
     </div>
 
 
     @if($errors->any())
+
         <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300">
 
             <p class="font-semibold">
@@ -38,12 +44,15 @@
             </p>
 
             <ul class="mt-2 list-inside list-disc text-sm">
-                @foreach($errors->all() as $error)
+
+                @foreach(collect($errors->all())->unique() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
+
             </ul>
 
         </div>
+
     @endif
 
 
@@ -55,28 +64,45 @@
         @csrf
 
 
-        <!-- DOCUMENT INFORMATION -->
+        {{-- DOCUMENT INFORMATION --}}
         <div class="mb-8">
 
             <div class="mb-5 flex items-center gap-3">
+
                 <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+
+                    <svg
+                        class="h-5 w-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8">
+
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
                         <path d="M14 2v6h6"/>
+
                     </svg>
+
                 </div>
-                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Pavadzīmes informācija</h2>
+
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">
+                    Pavadzīmes informācija
+                </h2>
+
             </div>
+
 
             <div class="grid gap-6 md:grid-cols-2">
 
-                <!-- DOCUMENT NUMBER -->
+                {{-- DOCUMENT NUMBER --}}
                 <div>
 
                     <label
                         for="document_number"
                         class="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+
                         Pavadzīmes numurs
+
                     </label>
 
                     <input
@@ -91,13 +117,15 @@
                 </div>
 
 
-                <!-- DATE -->
+                {{-- DATE --}}
                 <div>
 
                     <label
                         for="received_at"
                         class="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+
                         Saņemšanas datums un laiks
+
                     </label>
 
                     <input
@@ -115,12 +143,13 @@
         </div>
 
 
-        <!-- PRODUCTS -->
+        {{-- PRODUCTS --}}
         <div>
 
             <div class="mb-4 flex items-center justify-between">
 
                 <div>
+
                     <h2 class="text-lg font-bold text-slate-900 dark:text-white">
                         Saņemtās preces
                     </h2>
@@ -128,30 +157,42 @@
                     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                         Pievieno visas preces, kas norādītas pavadzīmē.
                     </p>
+
                 </div>
+
 
                 <button
                     type="button"
                     id="add-product"
                     class="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300 dark:hover:bg-emerald-400/15">
-                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+                    <svg
+                        class="h-4 w-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2">
+
                         <path d="M12 5v14"/>
                         <path d="M5 12h14"/>
+
                     </svg>
+
                     Pievienot preci
+
                 </button>
 
             </div>
 
 
-            <!-- PRODUCT ROWS -->
+            {{-- PRODUCT ROWS --}}
             <div id="product-list" class="space-y-4">
 
                 <div class="product-row rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-emerald-400/10 dark:bg-emerald-400/[0.035]">
 
                     <div class="grid items-end gap-4 md:grid-cols-12">
 
-                        <!-- PRODUCT -->
+                        {{-- PRODUCT --}}
                         <div class="md:col-span-7">
 
                             <label class="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
@@ -185,7 +226,7 @@
                         </div>
 
 
-                        <!-- QUANTITY -->
+                        {{-- QUANTITY --}}
                         <div class="md:col-span-3">
 
                             <label class="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
@@ -204,13 +245,15 @@
                         </div>
 
 
-                        <!-- REMOVE -->
+                        {{-- REMOVE --}}
                         <div class="md:col-span-2">
 
                             <button
                                 type="button"
                                 class="remove-product w-full rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-400/10 dark:text-red-300 dark:hover:bg-red-400/15">
+
                                 Dzēst
+
                             </button>
 
                         </div>
@@ -224,19 +267,23 @@
         </div>
 
 
-        <!-- BUTTONS -->
+        {{-- BUTTONS --}}
         <div class="mt-8 flex flex-col-reverse justify-end gap-3 border-t border-slate-100 pt-6 dark:border-emerald-400/10 sm:flex-row">
 
             <a
                 href="{{ route('stock-receipts.index') }}"
                 class="rounded-xl border border-slate-200 px-5 py-3 text-center text-sm font-semibold text-slate-600 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-400/15 dark:text-slate-300 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300">
+
                 Atcelt
+
             </a>
 
             <button
                 type="submit"
                 class="rounded-xl bg-emerald-400 px-6 py-3 text-sm font-bold text-[#07110f] transition hover:bg-emerald-300">
+
                 Reģistrēt saņemšanu
+
             </button>
 
         </div>
@@ -314,7 +361,9 @@
                         <button
                             type="button"
                             class="remove-product w-full rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-400/10 dark:text-red-300 dark:hover:bg-red-400/15">
+
                             Dzēst
+
                         </button>
 
                     </div>

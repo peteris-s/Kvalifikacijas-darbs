@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
 use App\Models\WarehouseLocation;
 use Illuminate\Http\Request;
 
@@ -14,9 +15,13 @@ class WarehouseLocationController extends Controller
             ->orderBy('name')
             ->get();
 
+        $productsByLocation = Product::orderBy('name')
+            ->get()
+            ->groupBy('warehouse_location_id');
+
         return view(
             'warehouse-locations.index',
-            compact('locations')
+            compact('locations', 'productsByLocation')
         );
     }
 
@@ -93,7 +98,6 @@ class WarehouseLocationController extends Controller
 
         // Pārbaudām, ka plaukta parent tiešām ir zona.
         if ($validated['type'] === 'shelf') {
-
             $parent = WarehouseLocation::find(
                 $validated['parent_id']
             );
@@ -178,7 +182,6 @@ class WarehouseLocationController extends Controller
         }
 
         if ($validated['type'] === 'shelf') {
-
             $parent = WarehouseLocation::find(
                 $validated['parent_id']
             );

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CustomerOrder;
+use App\Models\CustomerOrderItem;
 use App\Models\Product;
 use App\Models\StockIssue;
 use Illuminate\Http\Request;
@@ -11,52 +12,39 @@ use Illuminate\Validation\ValidationException;
 
 class CustomerOrderController extends Controller
 {
-    /**
-     * Parāda visus pasūtījumus.
-     */
     public function index()
     {
-        $orders = CustomerOrder::with([
-                'items.product.category',
-            ])
-            ->orderByRaw("
-                CASE
-                    WHEN status = 'pending' THEN 0
-                    ELSE 1
-                END
-            ")
+        $orders = CustomerOrder::with(['items.product.category'])
+            ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
             ->orderByDesc('ordered_at')
-            ->get();
+            ->orderByDesc('id')
+            ->paginate(15);
 
-        return view(
-            'customer-orders.index',
-            compact('orders')
-        );
+        $pendingCount = CustomerOrder::where('status', 'pending')
+            ->count();
+
+        $issuedCount = CustomerOrder::where('status', 'issued')
+            ->count();
+
+        return view('customer-orders.index', compact(
+            'orders',
+            'pendingCount',
+            'issuedCount'
+        ));
     }
 
-
-    /**
-     * Parāda jauna pasūtījuma izveides formu.
-     */
     public function create()
     {
         $products = Product::with([
-                'category',
-                'warehouseLocation.parent',
-            ])
+            'category',
+            'warehouseLocation.parent'
+        ])
             ->orderBy('name')
             ->get();
 
-        return view(
-            'customer-orders.create',
-            compact('products')
-        );
+        return view('customer-orders.create', compact('products'));
     }
 
-
-    /**
-     * Saglabā jaunu pasūtījumu.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -64,62 +52,107 @@ class CustomerOrderController extends Controller
                 'required',
                 'string',
                 'max:255',
-                'unique:customer_orders,order_number',
+                'unique:customer_orders,order_number'
             ],
-
             'notes' => [
                 'nullable',
                 'string',
-                'max:1000',
+                'max:1000'
             ],
-
             'products' => [
                 'required',
                 'array',
-                'min:1',
+                'min:1'
             ],
-
             'products.*.product_id' => [
                 'required',
                 'integer',
                 'exists:products,id',
-                'distinct',
+                'distinct'
             ],
-
             'products.*.quantity' => [
                 'required',
                 'integer',
-                'min:1',
+                'min:1'
             ],
         ]);
 
-
-        /*
-         * Pirms pasūtījuma izveides pārbaudām,
-         * vai noliktavā pietiek visu izvēlēto preču.
-         */
-        foreach ($validated['products'] as $index => $productData) {
-
-            $product = Product::findOrFail(
-                $productData['product_id']
-            );
-
-            if ($productData['quantity'] > $product->quantity) {
-
-                throw ValidationException::withMessages([
-                    "products.$index.quantity" =>
-                        'Pasūtītais daudzums precei "'
-                        . $product->name
-                        . '" pārsniedz pieejamo atlikumu. Noliktavā pieejami '
-                        . $product->quantity
-                        . ' gab.',
-                ]);
-            }
-        }
-
-
         DB::transaction(function () use ($validated) {
 
+            // Lock products in a consistent ID order.
+            $productIds = collect($validated['products'])
+                ->pluck('product_id')
+                ->map(fn ($id) => (int) $id)
+                ->sort()
+                ->values();
+
+            $products = Product::whereIn('id', $productIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            // Calculate quantities already reserved by pending orders.
+            $reserved = CustomerOrderItem::query()
+                ->select('customer_order_items.product_id')
+                ->selectRaw(
+                    'SUM(customer_order_items.quantity) AS reserved_quantity'
+                )
+                ->join(
+                    'customer_orders',
+                    'customer_orders.id',
+                    '=',
+                    'customer_order_items.customer_order_id'
+                )
+                ->where('customer_orders.status', 'pending')
+                ->whereIn('customer_order_items.product_id', $productIds)
+                ->groupBy('customer_order_items.product_id')
+                ->pluck(
+                    'reserved_quantity',
+                    'customer_order_items.product_id'
+                );
+
+            foreach ($validated['products'] as $index => $item) {
+
+                $product = $products->get(
+                    (int) $item['product_id']
+                );
+
+                if (!$product) {
+                    throw ValidationException::withMessages([
+                        "products.$index.product_id" =>
+                            'Izvēlētā prece vairs nav pieejama.',
+                    ]);
+                }
+
+                $reservedQuantity = (int) (
+                    $reserved->get($product->id) ?? 0
+                );
+
+                $availableQuantity = max(
+                    0,
+                    (int) $product->quantity - $reservedQuantity
+                );
+
+                if (
+                    (int) $item['quantity'] > $availableQuantity
+                ) {
+                    throw ValidationException::withMessages([
+                        "products.$index.quantity" =>
+                            'Nepietiekams brīvais atlikums precei "' .
+                            $product->name .
+                            '". Noliktavā: ' .
+                            $product->quantity .
+                            ' gab., rezervēti: ' .
+                            $reservedQuantity .
+                            ' gab., brīvi: ' .
+                            $availableQuantity .
+                            ' gab.',
+                    ]);
+                }
+            }
+
+            // Create the pending order.
             $order = CustomerOrder::create([
                 'order_number' => $validated['order_number'],
                 'status' => 'pending',
@@ -127,83 +160,57 @@ class CustomerOrderController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-
-            foreach ($validated['products'] as $productData) {
-
+            // Save all ordered products.
+            foreach ($validated['products'] as $item) {
                 $order->items()->create([
-                    'product_id' => $productData['product_id'],
-                    'quantity' => $productData['quantity'],
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
                 ]);
             }
-        });
 
+        }, 3);
 
         return redirect()
             ->route('customer-orders.index')
             ->with(
                 'success',
-                'Pasūtījums veiksmīgi reģistrēts un gaida izsniegšanu.'
+                'Pasūtījums veiksmīgi reģistrēts. Preces ir rezervētas līdz izsniegšanai.'
             );
     }
 
-
-    /**
-     * Izsniedz visu pasūtījumu.
-     */
     public function issue(CustomerOrder $customerOrder)
     {
         DB::transaction(function () use ($customerOrder) {
 
-            /**
-             * Bloķējam pašu pasūtījumu, lai divi
-             * darbinieki nevarētu to izsniegt vienlaicīgi.
-             */
-            $order = CustomerOrder::where(
-                'id',
+            // Prevent the same order from being issued twice.
+            $order = CustomerOrder::whereKey(
                 $customerOrder->id
             )
                 ->lockForUpdate()
                 ->firstOrFail();
 
-
-            /**
-             * Ja pasūtījums jau izsniegts,
-             * atkārtota izsniegšana nav atļauta.
-             */
             if (!$order->isPending()) {
                 throw ValidationException::withMessages([
-                    'order' => 'Šis pasūtījums jau ir izsniegts.',
+                    'order' =>
+                        'Šis pasūtījums jau ir izsniegts.',
                 ]);
             }
 
-
             $order->load('items');
 
-
-            /**
-             * Sakārtojam produktu ID.
-             * Tas palīdz samazināt DB bloķēšanas konfliktu risku.
-             */
             $productIds = $order->items
                 ->pluck('product_id')
                 ->sort()
                 ->values();
 
-
-            /**
-             * Bloķējam visas pasūtījuma preces.
-             */
+            // Lock products in ascending ID order.
             $products = Product::whereIn('id', $productIds)
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get()
                 ->keyBy('id');
 
-
-            /**
-             * PIRMS jebkādas atlikumu samazināšanas
-             * pārbaudām visas preces.
-             */
+            // Validate all quantities before issuing anything.
             foreach ($order->items as $item) {
 
                 $product = $products->get(
@@ -217,65 +224,51 @@ class CustomerOrderController extends Controller
                     ]);
                 }
 
-
-                if ($product->quantity < $item->quantity) {
-
+                if (
+                    $product->quantity < $item->quantity
+                ) {
                     throw ValidationException::withMessages([
                         'order' =>
-                            'Nepietiekams atlikums precei "'
-                            . $product->name
-                            . '". Pieejams: '
-                            . $product->quantity
-                            . ' gab., nepieciešams: '
-                            . $item->quantity
-                            . ' gab.',
+                            'Nepietiekams atlikums precei "' .
+                            $product->name .
+                            '". Pieejams: ' .
+                            $product->quantity .
+                            ' gab., nepieciešams: ' .
+                            $item->quantity .
+                            ' gab.',
                     ]);
                 }
             }
 
-
-            /**
-             * Visām precēm atlikums ir pietiekams.
-             * Tagad varam izsniegt visu pasūtījumu.
-             */
+            // Issue all products and update warehouse stock.
             foreach ($order->items as $item) {
 
                 $product = $products->get(
                     $item->product_id
                 );
 
-
-                /**
-                 * Izveidojam izsniegšanas vēstures ierakstu.
-                 */
                 StockIssue::create([
                     'order_number' => $order->order_number,
                     'product_id' => $product->id,
                     'user_id' => auth()->id(),
                     'quantity' => $item->quantity,
-                    'notes' => 'Izsniegts no pasūtījumu saraksta.',
+                    'notes' =>
+                        'Izsniegts no pasūtījumu saraksta.',
                     'issued_at' => now(),
                 ]);
 
-
-                /**
-                 * Samazinām noliktavas atlikumu.
-                 */
                 $product->decrement(
                     'quantity',
                     $item->quantity
                 );
             }
 
-
-            /**
-             * Pasūtījums pilnībā izsniegts.
-             */
+            // Mark the order as issued.
             $order->update([
-                'status' => 'issued',
+                'status' => 'issued'
             ]);
-        });
 
+        }, 3);
 
         return redirect()
             ->route('customer-orders.index')

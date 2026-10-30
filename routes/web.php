@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Http\Controllers\AuthController;
@@ -17,7 +18,6 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-
 // ==============================
 // AUTH
 // ==============================
@@ -32,7 +32,6 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
-
 // ==============================
 // AUTHENTICATED USERS
 // ==============================
@@ -46,14 +45,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
 
-
     // ==============================
     // PRODUCTS - EVERYONE CAN VIEW
     // ==============================
 
     Route::get('/products', [ProductController::class, 'index'])
         ->name('products.index');
-
 
     // ==============================
     // CUSTOMER ORDERS
@@ -71,7 +68,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/customer-orders/{customerOrder}/issue', [CustomerOrderController::class, 'issue'])
         ->name('customer-orders.issue');
 
-
     // ==============================
     // STOCK RECEIPTS
     // ==============================
@@ -84,7 +80,6 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/stock-receipts', [StockReceiptController::class, 'store'])
         ->name('stock-receipts.store');
-
 
     // ==============================
     // STOCK ISSUES
@@ -99,7 +94,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/stock-issues', [StockIssueController::class, 'store'])
         ->name('stock-issues.store');
 
-
     // ==============================
     // INVENTORY ADJUSTMENTS
     // ==============================
@@ -113,14 +107,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/inventory-adjustments', [InventoryAdjustmentController::class, 'store'])
         ->name('inventory-adjustments.store');
 
-
     // ==============================
     // PURCHASE PLANNING
     // ==============================
 
     Route::get('/purchase-planning', [PurchasePlanningController::class, 'index'])
         ->name('purchase-planning.index');
-
 
     // ==============================
     // REPORTS
@@ -137,7 +129,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/reports/pdf', [ReportController::class, 'pdf'])
         ->name('reports.pdf');
-
 
     // ==============================
     // ADMIN ONLY
@@ -161,7 +152,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/products/{product}', [ProductController::class, 'destroy'])
             ->name('products.destroy');
 
-
         // CATEGORIES
         Route::get('/categories', [CategoryController::class, 'index'])
             ->name('categories.index');
@@ -180,7 +170,6 @@ Route::middleware('auth')->group(function () {
 
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
             ->name('categories.destroy');
-
 
         // WAREHOUSE STRUCTURE
         Route::get('/warehouse-locations', [WarehouseLocationController::class, 'index'])

@@ -1,3 +1,4 @@
+
 @extends('layouts.app')
 
 @section('title', 'Pasūtījumi | StockManager')
@@ -6,9 +7,8 @@
 
 <div class="mx-auto max-w-7xl">
 
-    <!-- HEADER -->
+    {{-- HEADER --}}
     <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
         <div>
             <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 dark:border-emerald-400/20 dark:bg-emerald-400/10">
                 <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
@@ -26,291 +26,197 @@
             </p>
         </div>
 
-        <a
-            href="{{ route('customer-orders.create') }}"
-            class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-bold text-[#07110f] shadow-sm transition hover:bg-emerald-300"
-        >
-            <svg
-                class="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-            >
+        <a href="{{ route('customer-orders.create') }}"
+           class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-bold text-[#07110f] shadow-sm transition hover:bg-emerald-300">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2">
                 <path d="M12 5v14"/>
                 <path d="M5 12h14"/>
             </svg>
-
             Reģistrēt pasūtījumu
         </a>
-
     </div>
 
-
-    <!-- SUCCESS -->
+    {{-- SUCCESS --}}
     @if (session('success'))
-
         <div class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300">
             {{ session('success') }}
         </div>
-
     @endif
 
-
-    <!-- ERRORS -->
+    {{-- ERRORS --}}
     @if ($errors->any())
-
         <div class="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300">
-
-            <p class="font-semibold">
-                Darbību neizdevās izpildīt.
-            </p>
+            <p class="font-semibold">Darbību neizdevās izpildīt.</p>
 
             <ul class="mt-2 list-disc space-y-1 pl-5">
-
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
-
             </ul>
-
         </div>
-
     @endif
 
-
-    <!-- STATISTICS -->
-    @php
-        $pendingCount = $orders
-            ->where('status', 'pending')
-            ->count();
-
-        $issuedCount = $orders
-            ->where('status', 'issued')
-            ->count();
-    @endphp
-
-
+    {{-- STATISTICS --}}
     <div class="mb-8 grid gap-5 md:grid-cols-3">
 
-        <!-- TOTAL -->
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-emerald-400/15 dark:bg-[#0d1b18]">
-
             <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
                 Kopā pasūtījumi
             </p>
-
             <p class="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
-                {{ $orders->count() }}
+                {{ $orders->total() }}
             </p>
-
         </div>
 
-
-        <!-- PENDING -->
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-emerald-400/15 dark:bg-[#0d1b18]">
-
             <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
                 Gaida izsniegšanu
             </p>
-
             <p class="mt-2 text-3xl font-bold text-amber-600 dark:text-amber-300">
                 {{ $pendingCount }}
             </p>
-
         </div>
 
-
-        <!-- ISSUED -->
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-emerald-400/15 dark:bg-[#0d1b18]">
-
             <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
                 Izsniegti
             </p>
-
             <p class="mt-2 text-3xl font-bold text-emerald-600 dark:text-emerald-300">
                 {{ $issuedCount }}
             </p>
-
         </div>
 
     </div>
 
-
-    <!-- ORDERS -->
+    {{-- ORDERS --}}
     <div class="space-y-5">
 
         @forelse ($orders as $order)
 
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-emerald-400/15 dark:bg-[#0d1b18]">
 
-                <!-- ORDER HEADER -->
+                {{-- ORDER HEADER --}}
                 <div class="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 dark:border-emerald-400/10 sm:flex-row sm:items-center sm:justify-between">
-
                     <div class="flex flex-wrap items-center gap-3">
 
                         <h2 class="text-lg font-bold text-slate-900 dark:text-white">
                             {{ $order->order_number }}
                         </h2>
 
-
                         @if ($order->status === 'pending')
-
                             <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
                                 <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                                 Gaida izsniegšanu
                             </span>
-
                         @elseif ($order->status === 'issued')
-
                             <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
                                 <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                                 Izsniegts
                             </span>
-
                         @else
-
                             <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-white/[0.06] dark:text-slate-300">
                                 {{ $order->status }}
                             </span>
-
                         @endif
 
                     </div>
 
-
                     <div class="text-sm text-slate-500 dark:text-slate-400">
                         {{ $order->ordered_at->format('d.m.Y H:i') }}
                     </div>
-
                 </div>
 
-
-                <!-- ORDER BODY -->
+                {{-- ORDER BODY --}}
                 <div class="p-6">
 
-                    <!-- PRODUCTS -->
+                    {{-- PRODUCTS --}}
                     <div class="overflow-x-auto">
-
                         <table class="min-w-full">
-
                             <thead>
-
                                 <tr class="border-b border-slate-100 dark:border-emerald-400/10">
-
                                     <th class="pb-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
                                         Prece
                                     </th>
-
                                     <th class="pb-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
                                         Pasūtīts
                                     </th>
-
                                     <th class="pb-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
                                         Noliktavā
                                     </th>
-
                                     <th class="pb-3 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
                                         Pieejamība
                                     </th>
-
                                 </tr>
-
                             </thead>
-
 
                             <tbody class="divide-y divide-slate-100 dark:divide-emerald-400/10">
 
                                 @foreach ($order->items as $item)
 
                                     @php
-                                        $enoughStock =
-                                            $item->product->quantity >= $item->quantity;
+                                        $enoughStock = $item->product->quantity >= $item->quantity;
                                     @endphp
 
                                     <tr>
-
-                                        <!-- PRODUCT -->
+                                        {{-- PRODUCT --}}
                                         <td class="py-4 pr-5">
-
                                             <p class="font-bold text-slate-900 dark:text-white">
                                                 {{ $item->product->name }}
                                             </p>
 
                                             @if ($item->product->category)
-
                                                 <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
                                                     {{ $item->product->category->name }}
                                                 </p>
-
                                             @endif
-
                                         </td>
 
-
-                                        <!-- ORDER QUANTITY -->
+                                        {{-- ORDER QUANTITY --}}
                                         <td class="py-4 pr-5">
-
                                             <span class="font-bold text-slate-900 dark:text-white">
                                                 {{ $item->quantity }} gab.
                                             </span>
-
                                         </td>
 
-
-                                        <!-- CURRENT STOCK -->
+                                        {{-- CURRENT STOCK --}}
                                         <td class="py-4 pr-5">
-
                                             <span class="text-slate-700 dark:text-slate-300">
                                                 {{ $item->product->quantity }} gab.
                                             </span>
-
                                         </td>
 
-
-                                        <!-- AVAILABILITY -->
+                                        {{-- AVAILABILITY --}}
                                         <td class="py-4">
 
                                             @if ($order->status === 'issued')
-
                                                 <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-white/[0.06] dark:text-slate-300">
                                                     Izsniegts
                                                 </span>
-
                                             @elseif ($enoughStock)
-
                                                 <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
                                                     <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                                                     Pietiekams atlikums
                                                 </span>
-
                                             @else
-
                                                 <span class="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-bold text-red-700 dark:bg-red-400/10 dark:text-red-300">
                                                     <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
                                                     Nepietiek atlikuma
                                                 </span>
-
                                             @endif
 
                                         </td>
-
                                     </tr>
 
                                 @endforeach
 
                             </tbody>
-
                         </table>
-
                     </div>
 
-
-                    <!-- NOTES -->
+                    {{-- NOTES --}}
                     @if ($order->notes)
-
                         <div class="mt-5 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-emerald-400/10 dark:bg-emerald-400/[0.04]">
-
                             <p class="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
                                 Piezīmes
                             </p>
@@ -318,13 +224,10 @@
                             <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
                                 {{ $order->notes }}
                             </p>
-
                         </div>
-
                     @endif
 
-
-                    <!-- ACTION -->
+                    {{-- ISSUE ACTION --}}
                     @if ($order->status === 'pending')
 
                         @php
@@ -338,63 +241,45 @@
                             }
                         @endphp
 
-
                         <div class="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-5 dark:border-emerald-400/10 sm:flex-row sm:items-center sm:justify-between">
-
                             <div>
-
                                 @if ($canIssue)
-
                                     <p class="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
                                         Visas pasūtījuma preces ir pieejamas noliktavā.
                                     </p>
-
                                 @else
-
                                     <p class="text-sm font-semibold text-red-600 dark:text-red-300">
-                                        Pasūtījumu nevar izsniegt, jo visām precēm nepietiek atlikuma.
+                                        Pasūtījumu nevar izsniegt, jo vienai vai vairākām precēm nepietiek atlikuma.
                                     </p>
-
                                 @endif
-
                             </div>
 
-
-                            <form
-                                id="issue-form-{{ $order->id }}"
-                                method="POST"
-                                action="{{ route('customer-orders.issue', $order) }}"
-                            >
-
+                            <form id="issue-form-{{ $order->id }}"
+                                  method="POST"
+                                  action="{{ route('customer-orders.issue', $order) }}">
                                 @csrf
 
-                                <button
-                                    type="button"
-                                    @disabled(!$canIssue)
-                                    onclick="openIssueModal('issue-form-{{ $order->id }}')"
-                                    class="rounded-lg px-5 py-3 text-sm font-semibold transition
-                                    {{ $canIssue
-                                        ? 'bg-emerald-400 text-[#07110f] hover:bg-emerald-300'
-                                        : 'cursor-not-allowed bg-slate-300 text-slate-500 dark:bg-white/10 dark:text-slate-600' }}"
-                                >
+                                <button type="button"
+                                        @disabled(!$canIssue)
+                                        onclick="openIssueModal('issue-form-{{ $order->id }}')"
+                                        class="rounded-lg px-5 py-3 text-sm font-semibold transition
+                                        {{ $canIssue
+                                            ? 'bg-emerald-400 text-[#07110f] hover:bg-emerald-300'
+                                            : 'cursor-not-allowed bg-slate-300 text-slate-500 dark:bg-white/10 dark:text-slate-600' }}">
                                     Izsniegt pasūtījumu
                                 </button>
-
                             </form>
-
                         </div>
 
                     @endif
 
                 </div>
-
             </div>
 
         @empty
 
-            <!-- EMPTY -->
+            {{-- EMPTY STATE --}}
             <div class="rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm dark:border-emerald-400/15 dark:bg-[#0d1b18]">
-
                 <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-50 text-2xl dark:bg-emerald-400/10">
                     📋
                 </div>
@@ -407,88 +292,154 @@
                     Reģistrē pirmo interneta veikala pasūtījumu, lai tas parādītos noliktavas darbiniekiem.
                 </p>
 
-                <a
-                    href="{{ route('customer-orders.create') }}"
-                    class="mt-6 inline-flex rounded-xl bg-emerald-400 px-5 py-3 text-sm font-bold text-[#07110f] transition hover:bg-emerald-300"
-                >
+                <a href="{{ route('customer-orders.create') }}"
+                   class="mt-6 inline-flex rounded-xl bg-emerald-400 px-5 py-3 text-sm font-bold text-[#07110f] transition hover:bg-emerald-300">
                     Reģistrēt pirmo pasūtījumu
                 </a>
-
             </div>
 
         @endforelse
 
     </div>
 
+    {{-- CUSTOM PAGINATION --}}
+    @if ($orders->total() > 0)
+
+        <div class="mt-6 rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm dark:border-emerald-400/15 dark:bg-[#0d1b18]">
+
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+
+                {{-- RESULTS INFO --}}
+                <div>
+                    <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                        Rāda
+                        <span class="font-bold text-emerald-600 dark:text-emerald-300">
+                            {{ $orders->firstItem() }}–{{ $orders->lastItem() }}
+                        </span>
+                        no
+                        <span class="font-bold text-emerald-600 dark:text-emerald-300">
+                            {{ $orders->total() }}
+                        </span>
+                        pasūtījumiem
+                    </p>
+
+                    <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                        Lapa {{ $orders->currentPage() }} no {{ $orders->lastPage() }}
+                        · {{ $orders->perPage() }} ieraksti vienā lapā
+                    </p>
+                </div>
+
+                {{-- PAGINATION BUTTONS --}}
+                @if ($orders->hasPages())
+
+                    <nav class="flex flex-wrap items-center gap-2"
+                         aria-label="Pasūtījumu lapošana">
+
+                        {{-- PREVIOUS --}}
+                        @if ($orders->onFirstPage())
+                            <span class="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-400 opacity-60 dark:border-emerald-400/10 dark:bg-[#091512] dark:text-slate-600">
+                                <span aria-hidden="true">←</span>
+                                Iepriekšējā
+                            </span>
+                        @else
+                            <a href="{{ $orders->previousPageUrl() }}"
+                               rel="prev"
+                               class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-400/15 dark:bg-[#091512] dark:text-slate-300 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300">
+                                <span aria-hidden="true">←</span>
+                                Iepriekšējā
+                            </a>
+                        @endif
+
+                        {{-- PAGE NUMBERS --}}
+                        @foreach ($orders->getUrlRange(
+                            max(1, $orders->currentPage() - 2),
+                            min($orders->lastPage(), $orders->currentPage() + 2)
+                        ) as $page => $url)
+
+                            @if ($page == $orders->currentPage())
+                                <span aria-current="page"
+                                      class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl bg-emerald-400 px-3 text-sm font-bold text-[#07110f] shadow-sm">
+                                    {{ $page }}
+                                </span>
+                            @else
+                                <a href="{{ $url }}"
+                                   aria-label="Atvērt {{ $page }}. lapu"
+                                   class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-400/15 dark:bg-[#091512] dark:text-slate-300 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300">
+                                    {{ $page }}
+                                </a>
+                            @endif
+
+                        @endforeach
+
+                        {{-- NEXT --}}
+                        @if ($orders->hasMorePages())
+                            <a href="{{ $orders->nextPageUrl() }}"
+                               rel="next"
+                               class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-400/15 dark:bg-[#091512] dark:text-slate-300 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300">
+                                Nākamā
+                                <span aria-hidden="true">→</span>
+                            </a>
+                        @else
+                            <span class="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-400 opacity-60 dark:border-emerald-400/10 dark:bg-[#091512] dark:text-slate-600">
+                                Nākamā
+                                <span aria-hidden="true">→</span>
+                            </span>
+                        @endif
+
+                    </nav>
+
+                @endif
+
+            </div>
+
+        </div>
+
+    @endif
+
 </div>
 
+{{-- ISSUE CONFIRMATION MODAL --}}
+<div id="issue-modal"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="issue-modal-title"
+     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
 
-<!-- ISSUE CONFIRMATION MODAL -->
-<div
-    id="issue-modal"
-    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
->
-    <div
-        class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl
-               dark:border-emerald-400/20 dark:bg-[#0d1b18]"
-    >
+    <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-emerald-400/20 dark:bg-[#0d1b18]">
 
         <div class="flex items-start gap-4">
 
-            <div
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl
-                       bg-emerald-100 text-emerald-600
-                       dark:bg-emerald-400/10 dark:text-emerald-300"
-            >
-                <svg
-                    class="h-6 w-6"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300">
+                <svg class="h-6 w-6" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20 6 9 17l-5-5"/>
                 </svg>
             </div>
 
-
             <div>
-
-                <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+                <h3 id="issue-modal-title"
+                    class="text-lg font-bold text-slate-900 dark:text-white">
                     Izsniegt pasūtījumu?
                 </h3>
 
                 <p class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
                     Vai tiešām vēlaties izsniegt šo pasūtījumu?
                 </p>
-
             </div>
 
         </div>
 
-
         <div class="mt-6 flex justify-end gap-3">
 
-            <button
-                type="button"
-                onclick="closeIssueModal()"
-                class="rounded-xl border border-slate-200 px-5 py-2.5
-                       text-sm font-semibold text-slate-700 transition
-                       hover:bg-slate-100
-                       dark:border-white/10 dark:text-slate-300
-                       dark:hover:bg-white/5"
-            >
+            <button type="button"
+                    onclick="closeIssueModal()"
+                    class="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
                 Nē
             </button>
 
-
-            <button
-                type="button"
-                onclick="confirmIssue()"
-                class="rounded-xl bg-emerald-400 px-5 py-2.5
-                       text-sm font-bold text-[#07110f] transition
-                       hover:bg-emerald-300"
-            >
+            <button type="button"
+                    onclick="confirmIssue()"
+                    class="rounded-xl bg-emerald-400 px-5 py-2.5 text-sm font-bold text-[#07110f] transition hover:bg-emerald-300">
                 Jā, izsniegt
             </button>
 
@@ -497,19 +448,21 @@
     </div>
 </div>
 
-
 <script>
     let selectedIssueForm = null;
 
     function openIssueModal(formId) {
         selectedIssueForm = document.getElementById(formId);
 
+        if (!selectedIssueForm) {
+            return;
+        }
+
         const modal = document.getElementById('issue-modal');
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
     }
-
 
     function closeIssueModal() {
         const modal = document.getElementById('issue-modal');
@@ -519,7 +472,6 @@
 
         selectedIssueForm = null;
     }
-
 
     function confirmIssue() {
         if (!selectedIssueForm) {
@@ -533,24 +485,18 @@
         form.submit();
     }
 
-
     document
         .getElementById('issue-modal')
         .addEventListener('click', function (event) {
-
             if (event.target === this) {
                 closeIssueModal();
             }
-
         });
 
-
     document.addEventListener('keydown', function (event) {
-
         if (event.key === 'Escape') {
             closeIssueModal();
         }
-
     });
 </script>
 

@@ -470,24 +470,20 @@
                     </div>
 
 
-                    {{-- ERRORS --}}
-                    @if ($errors->any())
-
-                        <div class="mb-6 rounded-xl border border-red-200
-                                    bg-red-50 px-4 py-3 text-sm text-red-700
-                                    dark:border-red-900/60 dark:bg-red-950/40
-                                    dark:text-red-300">
-
-                            <p class="font-semibold">
-                                Neizdevās pieslēgties
-                            </p>
-
-                            <p class="mt-1">
-                                {{ $errors->first() }}
-                            </p>
-
+                    {{-- ERRORS / LOGIN LOCKOUT --}}
+                    @if (session('lockout_seconds', 0) > 0)
+                        <div id="lockout-alert" role="alert"
+                             data-seconds="{{ (int) session('lockout_seconds') }}"
+                             class="mb-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                            <p class="font-bold">Pārāk daudz pieslēgšanās mēģinājumu</p>
+                            <p class="mt-1">Drošības nolūkos pieslēgšanās uz laiku ir bloķēta.</p>
+                            <p class="mt-2 font-semibold">Atlikušais laiks: <span id="lockout-timer">--:--</span></p>
                         </div>
-
+                    @elseif ($errors->any())
+                        <div role="alert" class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+                            <p class="font-semibold">Neizdevās pieslēgties</p>
+                            <p class="mt-1">{{ $errors->first() }}</p>
+                        </div>
                     @endif
 
 
@@ -575,6 +571,7 @@
                         {{-- SUBMIT --}}
                         <button
                             type="submit"
+                            id="login-submit"
                             class="w-full rounded-xl bg-emerald-400
                                    px-5 py-3 font-bold text-[#0b1614]
                                    shadow-lg shadow-emerald-950/10
@@ -627,6 +624,39 @@
 
     </div>
 
+
+    {{-- LOGIN LOCKOUT COUNTDOWN --}}
+    <script>
+        (function () {
+            const alert = document.getElementById('lockout-alert');
+            const button = document.getElementById('login-submit');
+            if (!alert || !button) return;
+
+            const seconds = Number(alert.dataset.seconds);
+            if (!Number.isFinite(seconds) || seconds <= 0) return;
+
+            const timer = document.getElementById('lockout-timer');
+            const expiresAt = Date.now() + seconds * 1000;
+            button.disabled = true;
+            button.classList.add('opacity-50', 'cursor-not-allowed');
+
+            function updateTimer() {
+                const remaining = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+                const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+                const secs = String(remaining % 60).padStart(2, '0');
+                timer.textContent = `${minutes}:${secs}`;
+
+                if (remaining === 0) {
+                    clearInterval(interval);
+                    button.disabled = false;
+                    button.classList.remove('opacity-50', 'cursor-not-allowed');
+                    alert.remove();
+                }
+            }
+            const interval = setInterval(updateTimer, 1000);
+            updateTimer();
+        })();
+    </script>
 
     {{-- THEME SWITCH --}}
     <script>

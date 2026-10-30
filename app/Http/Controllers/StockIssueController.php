@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CustomerOrder;
+use App\Models\CustomerOrderItem;
 use App\Models\Product;
 use App\Models\StockIssue;
 use Illuminate\Http\Request;
@@ -10,220 +12,184 @@ use Illuminate\Validation\ValidationException;
 
 class StockIssueController extends Controller
 {
-    /**
-     * Parāda preču izsniegšanas vēsturi.
-     */
+    /** Parāda izsniegšanas vēsturi, 15 pasūtījumus vienā lapā. */
     public function index()
     {
-        $stockIssues = StockIssue::with([
-                'product',
-                'user',
-            ])
-            ->orderByDesc('issued_at')
-            ->get();
+        // Lapošana pēc pasūtījuma numura, nevis atsevišķām preču rindām.
+        $orderPages = StockIssue::query()
+            ->select('order_number')
+            ->selectRaw('MAX(issued_at) AS latest_issued_at')
+            ->selectRaw('MAX(id) AS latest_id')
+            ->groupBy('order_number')
+            ->orderByDesc('latest_issued_at')
+            ->orderByDesc('latest_id')
+            ->paginate(15);
 
-        return view(
-            'stock-issues.index',
-            compact('stockIssues')
+        $orderNumbers = $orderPages->getCollection()->pluck('order_number');
+
+        $issuesByOrder = StockIssue::with(['product.category', 'user'])
+            ->whereIn('order_number', $orderNumbers->all())
+            ->orderByDesc('issued_at')
+            ->orderByDesc('id')
+            ->get()
+            ->groupBy('order_number');
+
+        // Saglabājam tādu pašu secību kā lapotajā pasūtījumu sarakstā.
+        $groupedIssues = $orderNumbers->mapWithKeys(
+            fn ($number) => [$number => $issuesByOrder->get($number, collect())]
         );
+
+        // Statistika par VISU vēsturi, nevis tikai atvērto lapu.
+        $totalOrders = $orderPages->total();
+        $totalPositions = StockIssue::count();
+        $totalItems = StockIssue::sum('quantity');
+
+        return view('stock-issues.index', compact(
+            'groupedIssues',
+            'orderPages',
+            'totalOrders',
+            'totalPositions',
+            'totalItems'
+        ));
     }
 
-
-    /**
-     * Parāda jaunas preču izsniegšanas formu.
-     */
+    /** Parāda jaunas preču izsniegšanas formu. */
     public function create()
     {
-        $products = Product::with([
-                'category',
-                'warehouseLocation.parent',
-            ])
+        $products = Product::with(['category', 'warehouseLocation.parent'])
             ->orderBy('name')
             ->get();
 
-        return view(
-            'stock-issues.create',
-            compact('products')
-        );
+        $reservedQuantities = CustomerOrderItem::query()
+            ->select('customer_order_items.product_id')
+            ->selectRaw('SUM(customer_order_items.quantity) AS reserved_quantity')
+            ->join(
+                'customer_orders',
+                'customer_orders.id',
+                '=',
+                'customer_order_items.customer_order_id'
+            )
+            ->where('customer_orders.status', 'pending')
+            ->groupBy('customer_order_items.product_id')
+            ->pluck('reserved_quantity', 'customer_order_items.product_id');
+
+        return view('stock-issues.create', compact(
+            'products',
+            'reservedQuantities'
+        ));
     }
 
-
-    /**
-     * Reģistrē vienu vai vairākas preces vienā izsniegšanā.
-     */
+    /** Reģistrē manuālu preču izsniegšanu no nerezervētā atlikuma. */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'order_number' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-
-            'products' => [
-                'required',
-                'array',
-                'min:1',
-            ],
-
+            'order_number' => ['required', 'string', 'max:255'],
+            'products' => ['required', 'array', 'min:1'],
             'products.*.product_id' => [
                 'required',
                 'integer',
                 'distinct',
-                'exists:products,id',
+                'exists:products,id'
             ],
-
-            'products.*.quantity' => [
-                'required',
-                'integer',
-                'min:1',
-            ],
-
-            'notes' => [
-                'nullable',
-                'string',
-                'max:1000',
-            ],
+            'products.*.quantity' => ['required', 'integer', 'min:1'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-
         DB::transaction(function () use ($validated) {
-
-            /*
-            |--------------------------------------------------------------------------
-            | Sagatavojam preces
-            |--------------------------------------------------------------------------
-            |
-            | Sakārtojam pēc ID, lai preces vienmēr tiktu bloķētas
-            | vienādā secībā.
-            |
-            */
+            // Pasūtījumu sadaļā izveidotie pasūtījumi jāizsniedz tikai tur.
+            if (CustomerOrder::where(
+                'order_number',
+                $validated['order_number']
+            )->exists()) {
+                throw ValidationException::withMessages([
+                    'order_number' =>
+                        'Šāds pasūtījuma numurs jau pastāv. ' .
+                        'Izsniedziet to sadaļā "Pasūtījumi".',
+                ]);
+            }
 
             $requestedProducts = collect($validated['products'])
-                ->sortBy('product_id')
+                ->sortBy(fn ($item) => (int) $item['product_id'])
                 ->values();
-
 
             $productIds = $requestedProducts
                 ->pluck('product_id')
                 ->map(fn ($id) => (int) $id)
                 ->all();
 
-
-            /*
-            |--------------------------------------------------------------------------
-            | Bloķējam visas nepieciešamās preces
-            |--------------------------------------------------------------------------
-            |
-            | lockForUpdate novērš situāciju, kur divi darbinieki
-            | vienlaicīgi mēģina izsniegt vienu un to pašu preci.
-            |
-            */
-
+            // Bloķējam produktus ID secībā.
             $products = Product::whereIn('id', $productIds)
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get()
                 ->keyBy('id');
 
+            // Rezervācijas aprēķinām pēc produktu bloķēšanas.
+            $reserved = CustomerOrderItem::query()
+                ->select('customer_order_items.product_id')
+                ->selectRaw('SUM(customer_order_items.quantity) AS reserved_quantity')
+                ->join(
+                    'customer_orders',
+                    'customer_orders.id',
+                    '=',
+                    'customer_order_items.customer_order_id'
+                )
+                ->where('customer_orders.status', 'pending')
+                ->whereIn('customer_order_items.product_id', $productIds)
+                ->groupBy('customer_order_items.product_id')
+                ->pluck(
+                    'reserved_quantity',
+                    'customer_order_items.product_id'
+                );
 
-            /*
-            |--------------------------------------------------------------------------
-            | Pārbaudām VISAS preces pirms atlikumu maiņas
-            |--------------------------------------------------------------------------
-            |
-            | Ja kaut vienai precei nav pietiekams atlikums,
-            | tiek izmests validation error un visa transakcija
-            | tiek atcelta.
-            |
-            */
-
+            // Pārbaudām visas rindas pirms saglabāšanas.
             foreach ($requestedProducts as $index => $requestedProduct) {
-
-                $productId =
-                    (int) $requestedProduct['product_id'];
-
-                $quantity =
-                    (int) $requestedProduct['quantity'];
-
-
+                $productId = (int) $requestedProduct['product_id'];
+                $quantity = (int) $requestedProduct['quantity'];
                 $product = $products->get($productId);
 
-
                 if (!$product) {
-
                     throw ValidationException::withMessages([
                         "products.$index.product_id" =>
                             'Izvēlētā prece netika atrasta.',
                     ]);
                 }
 
+                $reservedQuantity = (int) ($reserved->get($productId) ?? 0);
+                $availableQuantity = max(
+                    0,
+                    (int) $product->quantity - $reservedQuantity
+                );
 
-                if ($product->quantity < $quantity) {
-
+                if ($quantity > $availableQuantity) {
                     throw ValidationException::withMessages([
                         "products.$index.quantity" =>
-                            'Precei "' .
+                            'Nepietiekams brīvais atlikums precei "' .
                             $product->name .
-                            '" noliktavā nav pietiekams daudzums. Pieejams: ' .
-                            $product->quantity .
-                            ' gab.',
+                            '". Noliktavā: ' . $product->quantity .
+                            ' gab., rezervēti: ' . $reservedQuantity .
+                            ' gab., brīvi: ' . $availableQuantity . ' gab.',
                     ]);
                 }
             }
 
-
-            /*
-            |--------------------------------------------------------------------------
-            | Reģistrējam izsniegšanu
-            |--------------------------------------------------------------------------
-            |
-            | Tikai pēc tam, kad visas preces ir pārbaudītas,
-            | izveidojam izsniegšanas ierakstus un samazinām atlikumus.
-            |
-            */
-
             foreach ($requestedProducts as $requestedProduct) {
-
-                $productId =
-                    (int) $requestedProduct['product_id'];
-
-                $quantity =
-                    (int) $requestedProduct['quantity'];
-
-
+                $productId = (int) $requestedProduct['product_id'];
+                $quantity = (int) $requestedProduct['quantity'];
                 $product = $products->get($productId);
 
-
                 StockIssue::create([
-                    'order_number' =>
-                        $validated['order_number'],
-
-                    'product_id' =>
-                        $product->id,
-
-                    'user_id' =>
-                        auth()->id(),
-
-                    'quantity' =>
-                        $quantity,
-
-                    'notes' =>
-                        $validated['notes'] ?? null,
-
-                    'issued_at' =>
-                        now(),
+                    'order_number' => $validated['order_number'],
+                    'product_id' => $product->id,
+                    'user_id' => auth()->id(),
+                    'quantity' => $quantity,
+                    'notes' => $validated['notes'] ?? null,
+                    'issued_at' => now(),
                 ]);
 
-
-                $product->decrement(
-                    'quantity',
-                    $quantity
-                );
+                $product->decrement('quantity', $quantity);
             }
-
-        });
-
+        }, 3);
 
         return redirect()
             ->route('stock-issues.index')

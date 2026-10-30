@@ -11,16 +11,17 @@ use Illuminate\Support\Facades\DB;
 class StockReceiptController extends Controller
 {
     public function index()
-    {
-        $documents = StockReceiptDocument::with([
-            'user',
-            'receipts.product'
-        ])
-            ->orderByDesc('received_at')
-            ->get();
+{
+    $documents = StockReceiptDocument::with([
+        'user',
+        'receipts.product'
+    ])
+        ->orderByDesc('received_at')
+        ->orderByDesc('id')
+        ->paginate(15);
 
-        return view('stock-receipts.index', compact('documents'));
-    }
+    return view('stock-receipts.index', compact('documents'));
+}
 
     public function create()
     {
@@ -34,80 +35,45 @@ class StockReceiptController extends Controller
         $validated = $request->validate(
             [
                 'document_number' => [
-                    'required',
-                    'string',
-                    'max:255',
+                    'required', 'string', 'max:255',
                     'unique:stock_receipt_documents,document_number',
                 ],
-
-                'received_at' => [
-                    'required',
-                    'date',
-                ],
-
-                'products' => [
-                    'required',
-                    'array',
-                    'min:1',
-                ],
-
-                'products.*.product_id' => [
-                    'required',
-                    'exists:products,id',
-                    'distinct',
-                ],
-
-                'products.*.quantity' => [
-                    'required',
-                    'integer',
-                    'min:1',
-                ],
+                'received_at' => ['required', 'date'],
+                'products' => ['required', 'array', 'min:1'],
+                'products.*.product_id' => ['required', 'exists:products,id', 'distinct'],
+                'products.*.quantity' => ['required', 'integer', 'min:1'],
             ],
             [
-                'document_number.required' =>
-                    'Ievadi pavadzīmes numuru.',
-
-                'document_number.unique' =>
-                    'Pavadzīme ar šādu numuru jau eksistē.',
-
-                'received_at.required' =>
-                    'Norādi saņemšanas datumu.',
-
-                'products.required' =>
-                    'Pavadzīmē jābūt vismaz vienai precei.',
-
-                'products.*.product_id.required' =>
-                    'Izvēlies preci.',
-
-                'products.*.product_id.exists' =>
-                    'Izvēlētā prece neeksistē.',
-
-                'products.*.product_id.distinct' =>
-                    'Vienu un to pašu preci pavadzīmē drīkst pievienot tikai vienu reizi.',
-
-                'products.*.quantity.required' =>
-                    'Norādi saņemto daudzumu.',
-
-                'products.*.quantity.integer' =>
-                    'Daudzumam jābūt veselam skaitlim.',
-
-                'products.*.quantity.min' =>
-                    'Daudzumam jābūt vismaz 1.',
+                'document_number.required' => 'Ievadi pavadzīmes numuru.',
+                'document_number.unique' => 'Pavadzīme ar šādu numuru jau eksistē.',
+                'received_at.required' => 'Norādi saņemšanas datumu.',
+                'products.required' => 'Pavadzīmē jābūt vismaz vienai precei.',
+                'products.*.product_id.required' => 'Izvēlies preci.',
+                'products.*.product_id.exists' => 'Izvēlētā prece neeksistē.',
+                'products.*.product_id.distinct' => 'Vienu un to pašu preci pavadzīmē drīkst pievienot tikai vienu reizi.',
+                'products.*.quantity.required' => 'Norādi saņemto daudzumu.',
+                'products.*.quantity.integer' => 'Daudzumam jābūt veselam skaitlim.',
+                'products.*.quantity.min' => 'Daudzumam jābūt vismaz 1.',
             ]
         );
 
-        DB::transaction(function () use ($validated) {
+        // Every transaction locks product rows in the same order to reduce deadlocks.
+        $items = collect($validated['products'])
+            ->sortBy(fn (array $item) => (int) $item['product_id'])
+            ->values();
 
+        DB::transaction(function () use ($validated, $items) {
             $document = StockReceiptDocument::create([
                 'document_number' => $validated['document_number'],
                 'user_id' => auth()->id(),
                 'received_at' => $validated['received_at'],
             ]);
 
-            foreach ($validated['products'] as $item) {
-
-                $product = Product::lockForUpdate()
-                    ->findOrFail($item['product_id']);
+            foreach ($items as $item) {
+                $product = Product::query()
+                    ->whereKey($item['product_id'])
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
                 StockReceipt::create([
                     'document_id' => $document->id,
@@ -117,18 +83,12 @@ class StockReceiptController extends Controller
                     'received_at' => $validated['received_at'],
                 ]);
 
-                $product->increment(
-                    'quantity',
-                    $item['quantity']
-                );
+                $product->increment('quantity', $item['quantity']);
             }
-        });
+        }, 3);
 
         return redirect()
             ->route('stock-receipts.index')
-            ->with(
-                'success',
-                'Pavadzīme veiksmīgi reģistrēta un preču atlikumi papildināti.'
-            );
+            ->with('success', 'Pavadzīme veiksmīgi reģistrēta un preču atlikumi papildināti.');
     }
 }

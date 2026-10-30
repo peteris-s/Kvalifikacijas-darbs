@@ -1,58 +1,308 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+# StockManager
 
-## About Laravel
+**Noliktavas pārvaldības informācijas sistēma**
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+StockManager ir tīmekļa lietotne, kas paredzēta noliktavas preču uzskaitei, preču saņemšanas un izsniegšanas reģistrēšanai, klientu pasūtījumu pārvaldībai un noliktavas atlikumu kontrolei.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Projekts tiek izstrādāts programmēšanas tehniķa kvalifikācijas darba ietvaros.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+**Autors:** Pēteris Šmits
 
-## Learning Laravel
+## Projekta mērķis
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Izstrādāt noliktavas pārvaldības informācijas sistēmu, kas atvieglo ikdienas noliktavas darbu, samazina manuālās uzskaites kļūdas un nodrošina pārskatāmu informāciju par precēm, pasūtījumiem un noliktavas atlikumiem.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Galvenās funkcionalitātes
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### Preču pārvaldība
+- Preču pievienošana un rediģēšana.
+- Preču kategoriju pārvaldība.
+- Preču attēlu pievienošana.
+- Minimālā noliktavas atlikuma norādīšana.
+- Preču atrašanās vietu uzskaite.
 
-## Agentic Development
+### Noliktavas struktūra
+- Noliktavas atrašanās vietu pārvaldība.
+- Hierarhiska atrašanās vietu struktūra.
+- Preču piesaiste konkrētām atrašanās vietām.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### Preču saņemšana
+- Pavadzīmju reģistrēšana.
+- Vairāku preču pievienošana pavadzīmei.
+- Automātiska noliktavas atlikumu palielināšana.
+- Saņemšanas vēstures apskate.
+- Nederīgu un dublētu preču pozīciju pārbaude.
+
+### Pasūtījumi un preču izsniegšana
+- Klientu pasūtījumu izveide.
+- Preču rezervēšana pasūtījumiem.
+- Pasūtījumu statusu pārvaldība.
+- Manuāla preču izsniegšana.
+- Automātiska atlikumu samazināšana.
+- Rezervēto preču aizsardzība.
+- Izsniegšanas vēstures apskate.
+
+### Inventarizācija un atskaites
+- Noliktavas atlikumu pārbaude.
+- Inventarizācijas un atlikumu korekciju uzskaite.
+- Noliktavas atskaišu sagatavošana.
+- Atskaišu eksportēšana PDF un Excel formātā.
+
+### Papildu iespējas
+- Lietotāju autentifikācija.
+- Administratora un darbinieka lomas.
+- Pārskata panelis.
+- Iepirkumu plānošana.
+- Gaišais un tumšais režīms.
+- Sarakstu lapošana.
+- Datu validācija.
+
+## Izmantotās tehnoloģijas
+
+| Tehnoloģija | Pielietojums |
+|---|---|
+| PHP | Servera puses programmēšana |
+| Laravel | Tīmekļa lietotnes ietvars |
+| MySQL | Datubāze |
+| Blade | Lietotāja saskarnes veidnes |
+| HTML | Lapu struktūra |
+| Tailwind CSS | Dizains |
+| JavaScript | Interaktīvās funkcijas |
+| Composer | PHP atkarību pārvaldība |
+| Node.js un npm | Frontend atkarības |
+| Vite | Frontend resursu apstrāde |
+| Git | Versiju kontrole |
+
+## Sistēmas prasības
+
+Nepieciešams:
+
+- PHP versija, kas atbilst `composer.json` prasībām.
+- Composer.
+- MySQL serveris.
+- Node.js un npm.
+- Tīmekļa pārlūkprogramma.
+- Lokālā izstrādes vide, piemēram, Laragon.
+
+## Projekta uzstādīšana
+
+### 1. Projekta iegūšana
+
+Lejupielādē projektu vai klonē Git repozitoriju.
+
+Atver projekta mapi terminālī.
+
+### 2. PHP atkarību instalēšana
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 3. Vides konfigurēšana
 
-## Contributing
+Izveido `.env` failu, nokopējot `.env.example`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Windows vidē:
 
-## Code of Conduct
+```powershell
+Copy-Item .env.example .env
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Ģenerē lietotnes atslēgu:
 
-## Security Vulnerabilities
+```bash
+php artisan key:generate
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 4. Datubāzes konfigurēšana
 
-## License
+Izveido MySQL datubāzi ar nosaukumu `stockmanager`.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Failā `.env` norādi:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=stockmanager
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+Norādītās datubāzes vērtības ir piemērs lokālai Laragon videi.
+
+### 5. Demonstrācijas kontu konfigurēšana
+
+Failā `.env` pievieno:
+
+```env
+STOCKMANAGER_ADMIN_PASSWORD="aDMin1!parolE"
+STOCKMANAGER_EMPLOYEE_PASSWORD="Emp1oyee!parolE"
+```
+
+Šīs paroles paredzētas tikai lokālai demonstrācijas un testēšanas videi.
+
+### 6. Datubāzes sagatavošana
+
+Izpildi migrācijas:
+
+```bash
+php artisan migrate
+```
+
+Izveido demonstrācijas lietotājus:
+
+```bash
+php artisan db:seed
+```
+
+`DatabaseSeeder` izsauc:
+
+- `AdminUserSeeder`
+- `EmployeeUserSeeder`
+
+Šie seederi izveido administratora un darbinieka kontus, ja tie vēl neeksistē.
+
+**Piezīme:** Seederi izmanto `firstOrCreate()`. Ja lietotāji ar šiem e-pastiem jau eksistē, atkārtota seederu izpilde viņu paroles nemainīs.
+
+### 7. Failu glabātuves konfigurēšana
+
+```bash
+php artisan storage:link
+```
+
+### 8. Frontend atkarību instalēšana
+
+```bash
+npm install
+```
+
+### 9. Frontend servera palaišana
+
+```bash
+npm run dev
+```
+
+### 10. Laravel servera palaišana
+
+Atver otru termināli:
+
+```bash
+php artisan serve
+```
+
+Atver pārlūkprogrammā:
+
+http://127.0.0.1:8000
+
+## Demonstrācijas konti
+
+Sistēmas pārbaudei ir paredzēti divi lietotāju konti.
+
+### Administrators
+
+**E-pasts:** `admin@stockmanager.lv`
+
+**Parole:** `aDMin1!parolE`
+
+**Loma:** `admin`
+
+Administrators ir paredzēts sistēmas pārvaldībai.
+
+### Darbinieks
+
+**E-pasts:** `employee@stockmanager.lv`
+
+**Parole:** `Emp1oyee!parolE`
+
+**Loma:** `employee`
+
+Darbinieks ir paredzēts ikdienas noliktavas darbību veikšanai.
+
+### Svarīgi
+
+Šie konti ir paredzēti tikai kvalifikācijas darba demonstrācijai un lokālai testēšanai.
+
+Publiskā produkcijas vidē jāizmanto citas, drošas paroles.
+
+## Sistēmas lietošana
+
+1. Atver StockManager pārlūkprogrammā.
+2. Pieslēdzies ar administratora vai darbinieka kontu.
+3. Izveido preču kategorijas un noliktavas atrašanās vietas.
+4. Pievieno preces.
+5. Reģistrē preču saņemšanu.
+6. Izveido klientu pasūtījumus.
+7. Izsniedz pasūtījumos rezervētās preces.
+8. Apskati izsniegšanas vēsturi.
+9. Pārbaudi noliktavas atlikumus un atskaites.
+
+## Datu integritāte un drošība
+
+Sistēmā izmantoti vairāki datu aizsardzības mehānismi:
+
+- Lietotāju autentifikācija.
+- Lietotāju lomas.
+- Servera puses datu validācija.
+- Rezervēto preču atlikumu pārbaude.
+- Datubāzes transakcijas.
+- `lockForUpdate()` vienlaicīgu darbību apstrādei.
+- Aizsardzība pret negatīvu noliktavas atlikumu.
+- Dublētu preču pozīciju pārbaude.
+- Paroļu glabāšana datubāzē jauktā veidā, izmantojot Laravel `Hash`.
+
+## Testēšana
+
+Laravel automātiskos testus var palaist ar:
+
+```bash
+php artisan test
+```
+
+Manuāli pārbaudītie scenāriji:
+
+- Rezervēto preču manuālas izsniegšanas bloķēšana.
+- Servera atteikums, ja nav pietiekama brīvā atlikuma.
+- Klienta pasūtījuma izsniegšana.
+- Noliktavas atlikuma samazināšana pēc izsniegšanas.
+- Izsniegšanas bloķēšana, ja atlikums ir 0.
+- Eksistējoša klienta pasūtījuma numura izmantošanas aizliegums manuālai izsniegšanai.
+- Preču saņemšana ar nederīgu daudzumu.
+- Vienas preces atkārtotas pievienošanas bloķēšana pavadzīmē.
+
+## Projekta struktūra
+
+```text
+app/
+  Http/
+    Controllers/
+  Models/
+
+database/
+  migrations/
+  seeders/
+    DatabaseSeeder.php
+    AdminUserSeeder.php
+    EmployeeUserSeeder.php
+
+resources/
+  views/
+
+routes/
+  web.php
+
+public/
+storage/
+tests/
+```
+
+## Projekta statuss
+
+StockManager tiek izstrādāts programmēšanas tehniķa kvalifikācijas darba ietvaros.
+
+## Autors
+
+**Pēteris Šmits**
+
+Programmēšanas tehniķa kvalifikācijas darbs.

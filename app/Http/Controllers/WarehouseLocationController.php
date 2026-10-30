@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\WarehouseLocation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class WarehouseLocationController extends Controller
 {
@@ -28,6 +30,7 @@ class WarehouseLocationController extends Controller
     public function create()
     {
         $parents = WarehouseLocation::whereNull('parent_id')
+            ->where('type', 'zone')
             ->orderBy('name')
             ->get();
 
@@ -46,17 +49,14 @@ class WarehouseLocationController extends Controller
                     'string',
                     'max:255',
                 ],
-
                 'type' => [
                     'required',
                     'in:zone,shelf',
                 ],
-
                 'parent_id' => [
                     'nullable',
                     'exists:warehouse_locations,id',
                 ],
-
                 'description' => [
                     'nullable',
                     'string',
@@ -66,49 +66,40 @@ class WarehouseLocationController extends Controller
             [
                 'name.required' =>
                     'Ievadi atrašanās vietas nosaukumu.',
-
                 'type.required' =>
                     'Izvēlies atrašanās vietas tipu.',
-
                 'type.in' =>
                     'Nederīgs atrašanās vietas tips.',
-
                 'parent_id.exists' =>
                     'Izvēlētā zona neeksistē.',
             ]
         );
 
-        // Zona nevar atrasties zem citas zonas.
         if ($validated['type'] === 'zone') {
             $validated['parent_id'] = null;
         }
 
-        // Plauktam obligāti jābūt piesaistītam zonai.
-        if (
-            $validated['type'] === 'shelf' &&
-            empty($validated['parent_id'])
-        ) {
-            return back()
-                ->withErrors([
-                    'parent_id' =>
-                        'Plauktam jāizvēlas noliktavas zona.'
-                ])
-                ->withInput();
-        }
-
-        // Pārbaudām, ka plaukta parent tiešām ir zona.
         if ($validated['type'] === 'shelf') {
+            if (empty($validated['parent_id'])) {
+                throw ValidationException::withMessages([
+                    'parent_id' =>
+                        'Plauktam jāizvēlas noliktavas zona.',
+                ]);
+            }
+
             $parent = WarehouseLocation::find(
                 $validated['parent_id']
             );
 
-            if (!$parent || $parent->type !== 'zone') {
-                return back()
-                    ->withErrors([
-                        'parent_id' =>
-                            'Plauktu drīkst pievienot tikai noliktavas zonai.'
-                    ])
-                    ->withInput();
+            if (
+                !$parent ||
+                $parent->type !== 'zone' ||
+                $parent->parent_id !== null
+            ) {
+                throw ValidationException::withMessages([
+                    'parent_id' =>
+                        'Plauktu drīkst pievienot tikai galvenajai noliktavas zonai.',
+                ]);
             }
         }
 
@@ -125,6 +116,7 @@ class WarehouseLocationController extends Controller
     public function edit(WarehouseLocation $warehouseLocation)
     {
         $parents = WarehouseLocation::whereNull('parent_id')
+            ->where('type', 'zone')
             ->where('id', '!=', $warehouseLocation->id)
             ->orderBy('name')
             ->get();
@@ -139,64 +131,103 @@ class WarehouseLocationController extends Controller
         Request $request,
         WarehouseLocation $warehouseLocation
     ) {
-        $validated = $request->validate(
-            [
-                'name' => [
-                    'required',
-                    'string',
-                    'max:255',
-                ],
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'type' => [
+                'required',
+                'in:zone,shelf',
+            ],
+            'parent_id' => [
+                'nullable',
+                'exists:warehouse_locations,id',
+            ],
+            'description' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+        ]);
 
-                'type' => [
-                    'required',
-                    'in:zone,shelf',
-                ],
-
-                'parent_id' => [
-                    'nullable',
-                    'exists:warehouse_locations,id',
-                ],
-
-                'description' => [
-                    'nullable',
-                    'string',
-                    'max:1000',
-                ],
-            ]
-        );
-
-        if ($validated['type'] === 'zone') {
-            $validated['parent_id'] = null;
-        }
-
-        if (
-            $validated['type'] === 'shelf' &&
-            empty($validated['parent_id'])
+        DB::transaction(function () use (
+            $validated,
+            $warehouseLocation
         ) {
-            return back()
-                ->withErrors([
-                    'parent_id' =>
-                        'Plauktam jāizvēlas noliktavas zona.'
-                ])
-                ->withInput();
-        }
+            $location = WarehouseLocation::query()
+                ->lockForUpdate()
+                ->findOrFail($warehouseLocation->id);
 
-        if ($validated['type'] === 'shelf') {
-            $parent = WarehouseLocation::find(
-                $validated['parent_id']
-            );
-
-            if (!$parent || $parent->type !== 'zone') {
-                return back()
-                    ->withErrors([
-                        'parent_id' =>
-                            'Plauktu drīkst pievienot tikai noliktavas zonai.'
-                    ])
-                    ->withInput();
+            // Zona ar plauktiem nevar kļūt par plauktu.
+            if (
+                $location->type === 'zone' &&
+                $validated['type'] === 'shelf' &&
+                $location->children()->exists()
+            ) {
+                throw ValidationException::withMessages([
+                    'type' =>
+                        'Šo zonu nevar pārveidot par plauktu, jo tajā jau atrodas plaukti.',
+                ]);
             }
-        }
 
-        $warehouseLocation->update($validated);
+            // Plaukts, kurā atrodas preces,
+            // nevar kļūt par zonu.
+            if (
+                $location->type === 'shelf' &&
+                $validated['type'] === 'zone' &&
+                Product::where(
+                    'warehouse_location_id',
+                    $location->id
+                )->exists()
+            ) {
+                throw ValidationException::withMessages([
+                    'type' =>
+                        'Šo plauktu nevar pārveidot par zonu, jo tajā atrodas preces.',
+                ]);
+            }
+
+            // Zona vienmēr ir augšējā līmenī.
+            if ($validated['type'] === 'zone') {
+                $validated['parent_id'] = null;
+            }
+
+            // Plauktam obligāti jāatrodas zonā.
+            if ($validated['type'] === 'shelf') {
+                if (empty($validated['parent_id'])) {
+                    throw ValidationException::withMessages([
+                        'parent_id' =>
+                            'Plauktam jāizvēlas noliktavas zona.',
+                    ]);
+                }
+
+                if (
+                    (int) $validated['parent_id'] ===
+                    (int) $location->id
+                ) {
+                    throw ValidationException::withMessages([
+                        'parent_id' =>
+                            'Noliktavas vieta nevar būt pati sev vecāks.',
+                    ]);
+                }
+
+                $parent = WarehouseLocation::query()
+                    ->whereKey($validated['parent_id'])
+                    ->where('type', 'zone')
+                    ->whereNull('parent_id')
+                    ->first();
+
+                if (!$parent) {
+                    throw ValidationException::withMessages([
+                        'parent_id' =>
+                            'Plauktu drīkst piesaistīt tikai galvenajai noliktavas zonai.',
+                    ]);
+                }
+            }
+
+            $location->update($validated);
+        });
 
         return redirect()
             ->route('warehouse-locations.index')
@@ -208,16 +239,32 @@ class WarehouseLocationController extends Controller
 
     public function destroy(WarehouseLocation $warehouseLocation)
     {
-        if ($warehouseLocation->children()->exists()) {
-            return redirect()
-                ->route('warehouse-locations.index')
-                ->with(
-                    'error',
-                    'Zonu nevar dzēst, kamēr tajā atrodas plaukti.'
-                );
-        }
+        DB::transaction(function () use ($warehouseLocation) {
+            $location = WarehouseLocation::query()
+                ->lockForUpdate()
+                ->findOrFail($warehouseLocation->id);
 
-        $warehouseLocation->delete();
+            if ($location->children()->exists()) {
+                throw ValidationException::withMessages([
+                    'location' =>
+                        'Zonu nevar dzēst, kamēr tajā atrodas plaukti.',
+                ]);
+            }
+
+            if (
+                Product::where(
+                    'warehouse_location_id',
+                    $location->id
+                )->exists()
+            ) {
+                throw ValidationException::withMessages([
+                    'location' =>
+                        'Noliktavas vietu nevar dzēst, kamēr tajā atrodas preces.',
+                ]);
+            }
+
+            $location->delete();
+        });
 
         return redirect()
             ->route('warehouse-locations.index')
